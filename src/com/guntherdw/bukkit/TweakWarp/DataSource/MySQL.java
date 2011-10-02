@@ -65,10 +65,9 @@ public class MySQL {
         Connection conn = getConnection();
         PreparedStatement st = null;
         ResultSet rs = null;
-        List<Warp> warps = null;
+        List<Warp> warps = new ArrayList<Warp>();
         Warp temp = null;
         try {
-            int count = 0;
             st = conn.prepareStatement("SELECT id,name,x,y,z,pitch,yaw,world,warpgroup,accessgroup FROM `warps`");
             rs = st.executeQuery();
             while(rs.next()) {
@@ -83,14 +82,17 @@ public class MySQL {
                         rs.getString("accessgroup")
                 );
                 temp.setId(rs.getInt("id"));
-
-                if(warps==null)
-                    warps = new ArrayList<Warp>();
                 warps.add(temp);
 
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+        	try {
+        		if(conn != null) conn.close();
+        		if(st != null) st.close();
+        		if(rs != null) rs.close();
+        	} catch(Exception e) {}
         }
         return warps;
     }
@@ -119,8 +121,14 @@ public class MySQL {
                 temp.setId(rs.getInt("id"));
             }
 
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+        	try {
+        		if(conn != null) conn.close();
+        		if(st != null) st.close();
+        		if(rs != null) rs.close();
+        	} catch(Exception e) {}
         }
         return temp;
     }
@@ -150,8 +158,14 @@ public class MySQL {
                 temp.setId(rs.getInt("id"));
             }
 
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+        	try {
+        		if(conn != null) conn.close();
+        		if(st != null) st.close();
+        		if(rs != null) rs.close();
+        	} catch(Exception e) {}
         }
         return temp;
     }
@@ -185,8 +199,14 @@ public class MySQL {
             if(rs.next())
                 return rs.getInt(0);
 
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+        	try {
+        		if(conn != null) conn.close();
+        		if(st != null) st.close();
+        		if(rs != null) rs.close();
+        	} catch(Exception e) {}
         }
         return -1;
     }
@@ -201,8 +221,14 @@ public class MySQL {
             st.executeUpdate();
             return;
 
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+        	try {
+        		if(conn != null) conn.close();
+        		if(st != null) st.close();
+        		if(rs != null) rs.close();
+        	} catch(Exception e) {}
         }
     }
     
@@ -218,8 +244,14 @@ public class MySQL {
             st.executeUpdate();
             return;
 
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+        	try {
+        		if(conn != null) conn.close();
+        		if(st != null) st.close();
+        		if(rs != null) rs.close();
+        	} catch(Exception e) {}
         }
     }
 
