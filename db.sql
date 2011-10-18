@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS `warps` (
   `yaw` float NOT NULL,
   `world` varchar(25) NOT NULL DEFAULT 'world',
   `warpgroup` varchar(64) NOT NULL DEFAULT '',
-  `accessgroup` varchar(64) NOT NULL DEFAULT ''
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+  `accessgroup` varchar(64) NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`,`warpgroup`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=8 ;

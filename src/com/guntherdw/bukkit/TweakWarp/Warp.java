@@ -1,56 +1,19 @@
 package com.guntherdw.bukkit.TweakWarp;
 
-import com.avaje.ebean.validation.Length;
-import com.avaje.ebean.validation.NotEmpty;
-import com.avaje.ebean.validation.NotNull;
-
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
-
 import org.bukkit.Location;
 import org.bukkit.Server;
 
 /**
  * @author GuntherDW
  */
-@Entity()
-@Table(name="warps")
 public class Warp {
     
-    @Id
+
     private int id;
-
-    @Length(max=45)
-    @NotNull
     private String name;
-
-    @NotNull
-    private double x;
-
-    @NotNull
-    private double y;
-
-    @NotNull
-    private double z;
-
-    @NotNull
-    private float pitch;
-
-    @NotNull
-    private float yaw;
-
-    @Length(max=45)
-    @NotEmpty
-    private String world;
-
-    @Length(max=100)
-    @NotNull
-    private String warpgroup;
-    
-    @Length(max=100)
-    @NotNull
-    private String accessgroup;
+    private double x, y, z;
+    private float pitch, yaw;
+    private String world, warpgroup, accessgroup;
 
     /**
      *  Default constructor for persistence manager.
@@ -78,27 +41,6 @@ public class Warp {
 
     public Location getLocation(Server server) {
     	return new Location(server.getWorld(getWorld()),getX(), getY() + 1, getZ(), getYaw(), getPitch());
-    }
-    
-    public boolean delete(TweakWarp plugin) {
-    	if(plugin.forgetWarp(this)) {
-    		// plugin.getDatabase().delete(Warp.class, this.id);
-            plugin.getDataSource().deleteWarp(name, accessgroup);
-    		return true;
-    	}
-    	return false;
-    }
-    
-    public boolean save(TweakWarp plugin) {
-    	Warp w = plugin.getWarp(getWarpgroup(), getName());
-    	if(w != null) w.delete(plugin);
-    	if(plugin.registerWarp(this)) {
-    		// plugin.getDatabase().save(this);
-            int id = plugin.getDataSource().addWarp(this);
-            if(id!=-1) this.id = id;
-    		return true;
-    	}
-    	return false;
     }
     
 	public int getId() {
@@ -179,5 +121,19 @@ public class Warp {
 
 	public void setAccessgroup(String accessgroup) {
 		this.accessgroup = accessgroup;
+	}
+	
+	@Override
+	public String toString() {
+		return "Warp{id:"+getId()+"name:"+getName()+" group:" + getWarpgroup() + " accessgroup:" + getAccessgroup() + " x:"+getX()+"y:"+getY()+"z:"+getZ()+"pitch:"+getPitch()+"yaw:"+getYaw()+"}";
+	}
+
+	public void setLocation(Location location) {
+		setX(location.getX());
+		setY(location.getY());
+		setZ(location.getZ());
+		setPitch(location.getPitch()); 
+		setYaw(location.getYaw());
+		setWorld(location.getWorld().getName());
 	}
 }

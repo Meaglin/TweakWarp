@@ -10,12 +10,22 @@ import java.util.List;
 /**
  * @author GuntherDW
  */
-public class MySQL {
+public class Database {
 
     private TweakWarp plugin;
     private String db, user, pass, dbhost;
 
-    public MySQL(TweakWarp instance) {
+    public static final String SAVE_WARP = "REPLACE INTO `warps` (name,x,y,z,pitch,yaw,world,warpgroup,accessgroup) VALUES (?,?,?,?,?,?,?,?,?)";
+    
+    //public static final String GET_WARP_BY_ID = "SELECT * FROM `warps` WHERE `name` LIKE ? AND `warpgroup` LIKE ?";
+    //public static final String GET_WARP_BY_NAME = "SELECT * FROM `warps` WHERE `id` = ? LIMIT 1";
+    public static final String GET_ALL_WARPS = "SELECT * FROM `warps`";
+    
+    public static final String DELETE_WARP = "DELETE FROM `warps` WHERE `id` = ? LIMIT 1";
+    
+    
+    
+    public Database(TweakWarp instance) {
         this.plugin = instance;
         this.loadDriver();
         this.setupConnection();
@@ -43,15 +53,10 @@ public class MySQL {
         }
     }
 
-    private Connection getConnection()
+    private Connection getConnection() throws SQLException
     {
-        try {
-            String url = "jdbc:mysql://"+dbhost+":3306/" + db;
-            return DriverManager.getConnection(url + "?autoReconnect=true&user=" + user + "&password=" + pass);
-        } catch (SQLException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-            return null;
-        }
+        String url = "jdbc:mysql://"+dbhost+":3306/" + db;
+        return DriverManager.getConnection(url + "?autoReconnect=true&user=" + user + "&password=" + pass);
     }
 
     public void setupConnection() {
@@ -62,30 +67,33 @@ public class MySQL {
     }
 
     public List<Warp> getAllWarps() {
-        Connection conn = getConnection();
+        Connection conn = null;
         PreparedStatement st = null;
         ResultSet rs = null;
+        
         List<Warp> warps = new ArrayList<Warp>();
-        Warp temp = null;
         try {
-            st = conn.prepareStatement("SELECT id,name,x,y,z,pitch,yaw,world,warpgroup,accessgroup FROM `warps`");
+        	conn = getConnection();
+            st = conn.prepareStatement(GET_ALL_WARPS);
             rs = st.executeQuery();
             while(rs.next()) {
-                temp = new Warp(rs.getDouble("x"),
-                        rs.getDouble("y"),
-                        rs.getDouble("z"),
-                        rs.getFloat("pitch"),
-                        rs.getFloat("yaw"),
-                        rs.getString("name"),
-                        rs.getString("world"),
-                        rs.getString("warpgroup"),
-                        rs.getString("accessgroup")
+                Warp temp = new Warp(
+                		rs.getDouble(3),
+                        rs.getDouble(4),
+                        rs.getDouble(5),
+                        rs.getFloat(6),
+                        rs.getFloat(7),
+                        rs.getString(2),
+                        rs.getString(8),
+                        rs.getString(9),
+                        rs.getString(10)
                 );
-                temp.setId(rs.getInt("id"));
+                temp.setId(rs.getInt(1));
                 warps.add(temp);
 
             }
         } catch (Exception e) {
+        	TweakWarp.log.warning("[TweakWarp]Error loading warps:");
             e.printStackTrace();
         } finally {
         	try {
@@ -97,14 +105,15 @@ public class MySQL {
         return warps;
     }
 
+    /* 
     public Warp getWarp(int id) {
-        Connection conn = getConnection();
+        Connection conn = null;
         PreparedStatement st = null;
         ResultSet rs = null;
         Warp temp = null;
         try {
-            int count = 0;
-            st = conn.prepareStatement("SELECT id,name,x,y,z,pitch,yaw,world,warpgroup,accessgroup FROM `warps` WHERE `id` = ?");
+        	conn = getConnection();
+            st = conn.prepareStatement(GET_WARP_BY_ID);
             st.setInt(1, id);
             rs = st.executeQuery();
             if(rs.next()) {
@@ -122,6 +131,7 @@ public class MySQL {
             }
 
         } catch (Exception e) {
+        	TweakWarp.log.warning("[TweakWarp]Error getting warp with id " + id + ":");
             e.printStackTrace();
         } finally {
         	try {
@@ -132,15 +142,15 @@ public class MySQL {
         }
         return temp;
     }
-
+     
     public Warp getWarp(String name, String warpgroup) {
-        Connection conn = getConnection();
+        Connection conn = null;
         PreparedStatement st = null;
         ResultSet rs = null;
         Warp temp = null;
         try {
-            int count = 0;
-            st = conn.prepareStatement("SELECT id,name,x,y,z,pitch,yaw,world,warpgroup,accessgroup FROM `warps` WHERE `name` = ? AND `warpgroup` = ?");
+            conn = getConnection();
+            st = conn.prepareStatement(GET_WARP_BY_NAME);
             st.setString(1, name);
             st.setString(2, warpgroup);
             rs = st.executeQuery();
@@ -159,6 +169,7 @@ public class MySQL {
             }
 
         } catch (Exception e) {
+        	TweakWarp.log.warning("[TweakWarp]Error getting warp " + name + "[" + warpgroup + "]:");
             e.printStackTrace();
         } finally {
         	try {
@@ -169,20 +180,16 @@ public class MySQL {
         }
         return temp;
     }
+    */
+    public boolean saveWarp(Warp warp) { 
+        if(warp==null) return false;
 
-    public int addWarp(Warp warp) { // Returns the id for the newly generated warp
-        if(warp==null) return -1;
-        //boolean isUpdate = warp.getId()!=-1?true:false;
-
-        Connection conn = getConnection();
+        Connection conn = null;
         PreparedStatement st = null;
         ResultSet rs = null;
-        Warp temp = null;
         try {
-            // Delete any warp that was there beforehand
-            this.deleteWarp(warp.getName(), warp.getWarpgroup());
-
-            st = conn.prepareStatement("INSERT INTO `warps` (name,x,y,z,pitch,yaw,world,warpgroup,accessgroup) VALUES (?,?,?,?,?,?,?,?,?)", Statement.RETURN_GENERATED_KEYS);
+            conn = getConnection();
+            st = conn.prepareStatement(SAVE_WARP, Statement.RETURN_GENERATED_KEYS);
             st.setString(1, warp.getName());
             st.setDouble(2, warp.getX());
             st.setDouble(3, warp.getY());
@@ -192,15 +199,16 @@ public class MySQL {
             st.setString(7, warp.getWorld());
             st.setString(8, warp.getWarpgroup());
             st.setString(9, warp.getAccessgroup());
-
-            // st.executeQuery();
-            st.executeUpdate();
+            st.execute();
             rs = st.getGeneratedKeys();
-            if(rs.next())
-                return rs.getInt(0);
+            if(rs.next()) {
+                warp.setId(rs.getInt(1));
+            }
 
         } catch (Exception e) {
+        	TweakWarp.log.warning("[TweakWarp]Error saving " + warp.toString() + ":");
             e.printStackTrace();
+            return false;
         } finally {
         	try {
         		if(conn != null) conn.close();
@@ -208,21 +216,22 @@ public class MySQL {
         		if(rs != null) rs.close();
         	} catch(Exception e) {}
         }
-        return -1;
+        return true;
     }
 
-    public void deleteWarp(int id) {
-        Connection conn = getConnection();
+    public boolean deleteWarp(Warp warp) {
+        Connection conn = null;
         PreparedStatement st = null;
         ResultSet rs = null;
         try{
-            st = conn.prepareStatement("DELETE FROM `warps` WHERE `id` = ?");
-            st.setInt(1, id);
-            st.executeUpdate();
-            return;
-
+        	conn = getConnection();
+            st = conn.prepareStatement(DELETE_WARP);
+            st.setInt(1, warp.getId());
+            st.execute();
         } catch (Exception e) {
+        	TweakWarp.log.warning("[TweakWarp]Error deleting " + warp.toString() + ":");
             e.printStackTrace();
+            return false;
         } finally {
         	try {
         		if(conn != null) conn.close();
@@ -230,29 +239,6 @@ public class MySQL {
         		if(rs != null) rs.close();
         	} catch(Exception e) {}
         }
+        return true;
     }
-    
-    public void deleteWarp(String warpname, String warpgroup) {
-        if(warpname==null||warpname.trim().equals("")) return;
-        Connection conn = getConnection();
-        PreparedStatement st = null;
-        ResultSet rs = null;
-        try{
-            st = conn.prepareStatement("DELETE FROM `warps` WHERE `name` = ? AND `warpgroup` = ?");
-            st.setString(1, warpname);
-            st.setString(2, warpgroup);
-            st.executeUpdate();
-            return;
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-        	try {
-        		if(conn != null) conn.close();
-        		if(st != null) st.close();
-        		if(rs != null) rs.close();
-        	} catch(Exception e) {}
-        }
-    }
-
 }

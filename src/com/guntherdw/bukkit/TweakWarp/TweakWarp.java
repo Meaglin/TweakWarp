@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import com.guntherdw.bukkit.TweakWarp.DataSource.MySQL;
+import com.guntherdw.bukkit.TweakWarp.DataSource.Database;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
@@ -26,7 +26,7 @@ import com.nijikokun.bukkit.Permissions.Permissions;
  */
 public class TweakWarp extends JavaPlugin {
 
-    protected final static Logger log = Logger.getLogger("Minecraft");
+    public final static Logger log = Logger.getLogger("Minecraft");
     public static final String DEFAULT_WARP_GROUP = "default";
     public static final String DEFAULT_ACCESS_GROUP = "";
 
@@ -36,7 +36,7 @@ public class TweakWarp extends JavaPlugin {
     public List<String> saveWarps = new ArrayList<String>();;
     public TweakcraftUtils tweakcraftutils = null;
     
-    private MySQL ds;
+    private Database database;
 
     public boolean registerWarp(Warp warp) {
     	WarpGroup group = getWarpGroup(warp.getWarpgroup());
@@ -103,15 +103,14 @@ public class TweakWarp extends JavaPlugin {
     }
 
     public void loadAllWarps() {
-        List<Warp> warpies = ds.getAllWarps();
-        warps.clear();
-        for(Warp w : warpies) {
+    	warps.clear();
+        for(Warp w : getMysqlDatabase().getAllWarps()) {
             registerWarp(w);
         }
     }
     
-    public MySQL getDataSource() {
-        return ds;
+    public Database getMysqlDatabase() {
+        return database;
     }
 
     public void onDisable() {
@@ -122,9 +121,8 @@ public class TweakWarp extends JavaPlugin {
         setupPermissions();
         setupTCUtils();
 
-        this.ds = new MySQL(this);
+        this.database = new Database(this);
         saveWarps.clear();
-        // setupDatabase();
         loadAllWarps();
         PluginDescriptionFile pdfFile = this.getDescription();
         log.info("[TweakWarp] TweakWarp v"+pdfFile.getVersion()+" enabled!");
@@ -212,13 +210,12 @@ public class TweakWarp extends JavaPlugin {
             	return true;
             }
             
-            if(warp.delete(this)) {
+            if(getMysqlDatabase().deleteWarp(warp) && forgetWarp(warp)) {
                 log.info("[TweakWarp] Warp '"+warpname+"' removed by "+sendername+"!");
                 commandSender.sendMessage(ChatColor.AQUA + "Warp '"+warpname+"' removed!");
             } else {
                 commandSender.sendMessage(ChatColor.AQUA + "An error occured, contact an admin!");
             }
-            // this.reloadWarpTable(); SERIOUSLY ?
             return true;
         } else if(cmd.equals("setwarp")) {
             if(!(commandSender instanceof Player)) {
@@ -245,14 +242,26 @@ public class TweakWarp extends JavaPlugin {
             String accessgroup = DEFAULT_ACCESS_GROUP;
             if(strings.length > 2) accessgroup = strings[2].toLowerCase();
 
-            Warp tempwarp = new Warp(player.getLocation(), warpname, warpgroup, accessgroup);
-            if(tempwarp.save(this)) {
-                log.info("[TweakWarp] Warp '"+warpname+"' created by "+player.getName()+"!");
+            Warp old = getWarp(warpgroup, warpname);
+            if(old != null) {
+            	old.setLocation(player.getLocation());
+            	if(getMysqlDatabase().saveWarp(old)) {
+            		log.info("[TweakWarp] Player updated " + old.toString() + ".");
+                	player.sendMessage(ChatColor.AQUA + "Warp '"+warpname+"' updated!");
+            	} else {
+            		player.sendMessage(ChatColor.AQUA + "An error occured, contact an admin!");
+            	}
+                return true;
+            } 
+            
+            
+            Warp warp = new Warp(player.getLocation(), warpname, warpgroup, accessgroup);
+            if(getMysqlDatabase().saveWarp(warp) && this.registerWarp(warp)) {
+                log.info("[TweakWarp] Player created " + warp.toString() + ".");
                 player.sendMessage(ChatColor.AQUA + "Warp '"+warpname+"' created!");
             } else {
                 player.sendMessage(ChatColor.AQUA + "An error occured, contact an admin!");
             }
-            // this.reloadWarpTable(); SERIOUSLY ?
             return true;
         } else if(cmd.equals("warp")) {
             if(!(commandSender instanceof Player)) {
@@ -274,13 +283,13 @@ public class TweakWarp extends JavaPlugin {
             Warp warp = matchWarp(warpgroup, warpname);
             
             if(warp == null) {
-            	log.info("[TweakWarp] "+player.getName()+" tried to warp to '"+warpname+"'!");
+            	log.info("[TweakWarp] "+player.getName()+" tried to warp to invalid warp '"+warpname+"'!");
                 player.sendMessage(ChatColor.AQUA + "Warp not found!");
                 return true;
             }
             
             if(!inGroup(player,warp.getAccessgroup())) {
-            	log.info("[TweakWarp] "+player.getName()+" tried to warp to '"+warpname+"'!");
+            	log.info("[TweakWarp] "+player.getName()+" tried to warp to use warp '"+warpname+"' which he doesn't have permission for!");
                 player.sendMessage(ChatColor.AQUA + "Warp not found!");
                 return true;
             }
@@ -303,7 +312,7 @@ public class TweakWarp extends JavaPlugin {
                     return true;
                 log.info("[TweakWarp] "+player.getName()+" issued /reloadwarps!");
             } else {
-                log.info("[TweakWarp] console issued /reloadwarps!");
+                log.info("[TweakWarp] CONSOLE issued /reloadwarps!");
             }
 
             commandSender.sendMessage(ChatColor.GREEN + "Reloading warps table");

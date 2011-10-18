@@ -20,6 +20,7 @@ commands:
      listwarps:
         description: Lists the current warps
         usage: /<command> <warpgroup>
+        aliases: [ warps , warplist ]
      reloadwarps:
         description: Reloads the warp table
         usage: /<command>
